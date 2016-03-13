@@ -116,10 +116,10 @@ public class DeviceAdapter extends BaseAdapter {
         tvadd.setText(device.getAddress());
 
         if(workRate.getCalorie().length() > 0){
-            tvCollectDate.setText("날짜 : " + workRate.getCollectDt());
-            tvCalorie.setText("칼로리 : " + workRate.getCalorie());
-            tvSteps.setText("걸음수 : " + workRate.getSteps());
-            tvDistance.setText("거리 : " + workRate.getDistance());
+            tvCollectDate.setText("T:" + workRate.getCollectDt().substring(0, 12));
+            tvCalorie.setText("C:" + workRate.getCalorie());
+            tvSteps.setText("S:" + workRate.getSteps());
+            tvDistance.setText("D:" + workRate.getDistance());
         } else {
             tvCollectDate.setText("");
             tvCalorie.setText("");

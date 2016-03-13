@@ -11,6 +11,7 @@ import com.sovate.workratemanager.bean.ActivityWorkRate;
 import java.io.IOException;
 import java.util.List;
 
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -50,7 +51,7 @@ public class HttpApi {
         Call<ActivityBaseInfo> getBaseInfo();
 
         @POST("/HealthCare/activity/student/workrate")
-        Call<ActivityWorkRate> createWoakrate(@Body ActivityWorkRate workRate);
+        Call<Void>  createWoakrate(@Body ActivityWorkRate workRate);
 
 
     }
@@ -205,13 +206,15 @@ public class HttpApi {
 
         ActivityService activityService = retrofit.create(ActivityService.class);
 
-        Call<ActivityWorkRate> call = activityService.createWoakrate(workRate);
+        Call<Void> call = activityService.createWoakrate(workRate);
 
-        call.enqueue(new Callback<ActivityWorkRate>() {
+        call.enqueue(new Callback<Void>() {
             @Override
-            public void onResponse(Call<ActivityWorkRate> call, Response<ActivityWorkRate> response) {
+            public void onResponse(Call<Void> call, Response<Void> response) {
+
+                // restful이라 response code로 판단처리함.
                 Log.i(TAG, "Response status code: " + response.code());
-                Log.i(TAG, "Response values : " + response.body());
+                //Log.i(TAG, "Response values : " + response.body());
 
                 // isSuccess is true if response code => 200 and <= 300
                 if (!response.isSuccess()) {
@@ -225,12 +228,13 @@ public class HttpApi {
                 }
 
                 // 내부적으로 AysnTask를 사용하는 방식이라 외부 함수 호출을 해도 됌.
-                HttpApi.main.responsePostWorkrate(response.body(), null);
+                HttpApi.main.responsePostWorkrate(response.code(), null);
             }
 
             @Override
-            public void onFailure(Call<ActivityWorkRate> call, Throwable t) {
-                HttpApi.main.responseGetBaseInfo(null, t);
+            public void onFailure(Call<Void> call, Throwable t) {
+                Log.e(TAG, "onFailure" + t.getMessage());
+                HttpApi.main.responsePostWorkrate(0, t);
             }
         });
 

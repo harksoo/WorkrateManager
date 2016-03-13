@@ -41,15 +41,14 @@ import android.widget.Toast;
 import com.sovate.workratemanager.bean.ActivityBaseInfo;
 import com.sovate.workratemanager.bean.ActivityDevice;
 import com.sovate.workratemanager.bean.ActivityDeviceStudentInfo;
-import com.sovate.workratemanager.bean.ActivityWorkRate;
 import com.sovate.workratemanager.bean.DeviceInfo;
 import com.sovate.workratemanager.bundle.SettingData;
 import com.sovate.workratemanager.common.Singleton;
 import com.sovate.workratemanager.network.HttpApi;
+import com.sovate.workratemanager.network.HttpResponseCode;
 
 import java.lang.reflect.Method;
 import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -60,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
 
     // Constants
-    private static final String TAG = "UartService";
+    private static final String TAG = "MainActivity";
     private static final int REQUEST_SELECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
     private static final int UART_PROFILE_CONNECTED = 20;
@@ -73,6 +72,14 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     private static final int OPCODE_DEVICERESET = 202;
 
     private int deviceOperationCode = OPCODE_DEVICEDISCOVER;
+
+
+    // 네트워크 업로드 확인
+    private static final int NETWORK_TRANSACTION_NOTWORKING = 300;
+    private static final int NETWORK_TRANSACTION_WORKING = 301;
+    private static final int NETWORK_TRANSACTION_COMPLETE = 302;
+
+    private int networkTransactionStatus = NETWORK_TRANSACTION_NOTWORKING;
 
     // permission constants
     private final int MY_PERMISSION_GRANTED = 100;
@@ -364,7 +371,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             startMain.addCategory(Intent.CATEGORY_HOME);
             startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(startMain);
-            showMessage("InBodyBAND's running in background.\n             Disconnect to exit");
+            showMessage("운동량관리자가 백그라운드로 실행 중 입니다.\n             어플 종료를 위해 서비스를 종료하세요.");
         } else {
             new AlertDialog.Builder(this).setIcon(android.R.drawable.ic_dialog_alert).setTitle(R.string.popup_title)
                     .setMessage(R.string.popup_message)
@@ -650,8 +657,12 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     }
 
-    public void responsePostWorkrate(ActivityWorkRate workRate, Throwable t)
+    public void responsePostWorkrate(int responseCode, Throwable t)
     {
+        // trasaction complete 처리를 한다.
+        networkTransactionStatus = NETWORK_TRANSACTION_COMPLETE;
+        Log.i(TAG, "responsePostWorkrate");
+
         if(t != null){
             // 요청 실패임.
             Log.e(TAG, "onFailure");
@@ -661,6 +672,13 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         // TODO workRate의 등록 완료 메시지 처리
         // 향후 배치 처리로 한방에 올리도록 구성
+        // 500 create
+        if(responseCode == HttpResponseCode.SC_CREATED){
+            Toast.makeText(this, "생성 되었습니다.", Toast.LENGTH_SHORT).show();
+
+        } else {
+            Toast.makeText(this, "생성이 실패했습니다. (response code : " + responseCode + ")", Toast.LENGTH_SHORT).show();
+        }
 
 
     }
@@ -809,7 +827,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     // Bonding Bluetooth device
     private void pairDevice(final BluetoothDevice device) {
-        showMessage("InBodyBAND Bonding...");
+        showMessage("Wearable Device Bonding...");
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
         registerReceiver(mReceiver, filter);
         try {
@@ -1149,6 +1167,9 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                                     Thread.sleep(500);
                                 } catch (InterruptedException e) {
                                 }
+
+                                networkTransactionStatus = NETWORK_TRANSACTION_NOTWORKING;
+
                                 fncSendCommand((byte) 'A', (byte) 'W', null);
                             } else if (frame[4] == 'A' && frame[5] == 'W') {
                                 try {
@@ -1163,7 +1184,20 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                                 } catch (InterruptedException e) {
                                 }
 
-                                fncSendCommand((byte) 'A', (byte) 'E', null);
+                                Log.e(TAG, "==================== networkTransactionStatus : " + networkTransactionStatus);
+                                if(networkTransactionStatus == NETWORK_TRANSACTION_NOTWORKING){
+                                    fncSendCommand((byte) 'A', (byte) 'E', null);
+                                } if(networkTransactionStatus == NETWORK_TRANSACTION_COMPLETE){
+                                    // TODO 리셋처리를 한다.
+                                    networkTransactionStatus = NETWORK_TRANSACTION_NOTWORKING;
+                                    if (mDevice != null) {
+                                        mService.disconnect();
+                                    }
+                                }
+                                else {
+                                    fncSendCommand((byte) 'A', (byte) 'W', null);
+                                }
+
                             } else if (frame[4] == 'A' && frame[5] == 'E') { // 0x41 0x45 : 최종 할동량 전송 처리
 
                                 int startPosData = 6;
@@ -1199,10 +1233,14 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                                 String sportId = Singleton.getInstance().getSportId(sportName);
 
                                 // TODO 요청 처리를 변경 요망.
-                                deviceAdapter.setWorkrate(mDevice.getAddress(),
+                                boolean result =  deviceAdapter.setWorkrate(mDevice.getAddress(),
                                         collectDate,
                                         stepCalorie+runCalorie, steps+runCount, stepDistance + runDistance,
                                         sportId);
+
+                                if(result){
+                                    networkTransactionStatus = NETWORK_TRANSACTION_WORKING;
+                                }
 
                                 try {
                                     Thread.sleep(500);
