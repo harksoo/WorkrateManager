@@ -118,7 +118,7 @@ public class UartService extends Service {
 
             String log = "";
             for (int i = 0; i < text.length; i++)
-                log = log += String.format("%02X ", text[i]);
+                log += String.format("%02X ", text[i]);
             Log.i(TAG, "TX : " + log);
 
             intent.putExtra(EXTRA_DATA, text);
@@ -332,7 +332,7 @@ public class UartService extends Service {
 
         String _log = "";
         for (int i = 0; i < value.length; i++)
-            _log = _log += String.format("%02X ", value[i]);
+            _log += String.format("%02X ", value[i]);
         Log.i(TAG, "RX : " + _log);
 
         RxChar.setValue(value);

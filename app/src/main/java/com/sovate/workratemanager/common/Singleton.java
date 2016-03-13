@@ -152,4 +152,21 @@ public class Singleton {
 
         return  null;
     }
+
+    public String getSportId(String sportName){
+
+        if(activityBaseInfo != null
+                && activityBaseInfo.getListSport() != null
+                && activityBaseInfo.getListSport().size() > 0){
+            for(ActivitySport item : activityBaseInfo.getListSport()){
+
+                if(sportName.equals(item.getName())){
+                    return item.getId();
+                }
+
+            }
+        }
+
+        return null;
+    }
 }

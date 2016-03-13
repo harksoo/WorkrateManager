@@ -6,6 +6,7 @@ import com.sovate.workratemanager.MainActivity;
 import com.sovate.workratemanager.bean.ActivityBaseInfo;
 import com.sovate.workratemanager.bean.ActivityDevice;
 import com.sovate.workratemanager.bean.ActivityDeviceStudentInfo;
+import com.sovate.workratemanager.bean.ActivityWorkRate;
 
 import java.io.IOException;
 import java.util.List;
@@ -15,7 +16,9 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.http.Body;
 import retrofit2.http.GET;
+import retrofit2.http.POST;
 import retrofit2.http.Path;
 
 /**
@@ -45,6 +48,11 @@ public class HttpApi {
 
         @GET("/HealthCare/activity/baseInfo")
         Call<ActivityBaseInfo> getBaseInfo();
+
+        @POST("/HealthCare/activity/student/workrate")
+        Call<ActivityWorkRate> createWoakrate(@Body ActivityWorkRate workRate);
+
+
     }
 
 
@@ -181,6 +189,47 @@ public class HttpApi {
 
             @Override
             public void onFailure(Call<ActivityBaseInfo> call, Throwable t) {
+                HttpApi.main.responseGetBaseInfo(null, t);
+            }
+        });
+
+
+    }
+
+    public static void postWorkrate(ActivityWorkRate workRate) {
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        ActivityService activityService = retrofit.create(ActivityService.class);
+
+        Call<ActivityWorkRate> call = activityService.createWoakrate(workRate);
+
+        call.enqueue(new Callback<ActivityWorkRate>() {
+            @Override
+            public void onResponse(Call<ActivityWorkRate> call, Response<ActivityWorkRate> response) {
+                Log.i(TAG, "Response status code: " + response.code());
+                Log.i(TAG, "Response values : " + response.body());
+
+                // isSuccess is true if response code => 200 and <= 300
+                if (!response.isSuccess()) {
+                    // print response body if unsuccessful
+                    try {
+                        Log.e(TAG, response.errorBody().string());
+                    } catch (IOException e) {
+                        // do nothing
+                    }
+                    return;
+                }
+
+                // 내부적으로 AysnTask를 사용하는 방식이라 외부 함수 호출을 해도 됌.
+                HttpApi.main.responsePostWorkrate(response.body(), null);
+            }
+
+            @Override
+            public void onFailure(Call<ActivityWorkRate> call, Throwable t) {
                 HttpApi.main.responseGetBaseInfo(null, t);
             }
         });

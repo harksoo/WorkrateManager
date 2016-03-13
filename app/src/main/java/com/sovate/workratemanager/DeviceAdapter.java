@@ -11,8 +11,14 @@ import android.widget.BaseAdapter;
 import android.widget.TextView;
 
 import com.sovate.workratemanager.bean.ActivityDeviceStudentInfo;
+import com.sovate.workratemanager.bean.ActivityWorkRate;
 import com.sovate.workratemanager.bean.DeviceInfo;
+import com.sovate.workratemanager.network.HttpApi;
 
+import org.w3c.dom.Text;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -28,6 +34,29 @@ public class DeviceAdapter extends BaseAdapter {
         this.context = context;
         inflater = LayoutInflater.from(context);
         this.devices = devices;
+    }
+
+    public boolean setWorkrate(String mac, String collectDate, int Calorie, int steps, int distance, String sportId){
+        for(DeviceInfo item : devices){
+            if(item.getDevice().getAddress().equals(mac)){
+
+                item.getWorkRate().setUserId(item.getDeviceStudentInfo().getUserId());
+                item.getWorkRate().setMac(mac);
+                item.getWorkRate().setCollectDt(collectDate);
+                item.getWorkRate().setCalorie(Integer.toString(Calorie));
+                item.getWorkRate().setSteps(Integer.toString(steps));
+                item.getWorkRate().setDistance(Integer.toString(distance));
+                item.getWorkRate().setSportId(sportId);
+
+                notifyDataSetChanged();
+
+                HttpApi.postWorkrate(item.getWorkRate());
+
+                return  true;
+            }
+        }
+
+        return false;
     }
 
     @Override
@@ -57,10 +86,17 @@ public class DeviceAdapter extends BaseAdapter {
 
         BluetoothDevice device = devices.get(position).getDevice();
         ActivityDeviceStudentInfo deviceStudentInfo = devices.get(position).getDeviceStudentInfo();
+        ActivityWorkRate workRate =  devices.get(position).getWorkRate();
 
         final TextView tvuserName = ((TextView) vg.findViewById(R.id.userName));
         final TextView tvadd = ((TextView) vg.findViewById(R.id.address));
         final TextView tvname = ((TextView) vg.findViewById(R.id.name));
+
+        final TextView tvCollectDate = ((TextView) vg.findViewById(R.id.collectDate));
+        final TextView tvCalorie = ((TextView) vg.findViewById(R.id.calorie));
+        final TextView tvSteps = ((TextView) vg.findViewById(R.id.steps));
+        final TextView tvDistance = ((TextView) vg.findViewById(R.id.distance));
+
         //final TextView tvpaired = (TextView) vg.findViewById(R.id.paired);
         //final TextView tvrssi = (TextView) vg.findViewById(R.id.rssi);
 
@@ -76,12 +112,22 @@ public class DeviceAdapter extends BaseAdapter {
 
 
         tvuserName.setText(deviceStudentInfo.getUserName());
-
-
-        //tvuserName.setText("Student_01");
-
         tvname.setText(device.getName());
         tvadd.setText(device.getAddress());
+
+        if(workRate.getCalorie().length() > 0){
+            tvCollectDate.setText("날짜 : " + workRate.getCollectDt());
+            tvCalorie.setText("칼로리 : " + workRate.getCalorie());
+            tvSteps.setText("걸음수 : " + workRate.getSteps());
+            tvDistance.setText("거리 : " + workRate.getDistance());
+        } else {
+            tvCollectDate.setText("");
+            tvCalorie.setText("");
+            tvSteps.setText("");
+            tvDistance.setText("");
+        }
+
+
         if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
             Log.i(TAG, "device::" + device.getName());
 //            tvname.setTextColor(Color.WHITE);
@@ -95,11 +141,11 @@ public class DeviceAdapter extends BaseAdapter {
             tvuserName.setTextColor(Color.BLACK);
             tvname.setTextColor(Color.BLACK);
             tvadd.setTextColor(Color.BLACK);
-//            tvpaired.setTextColor(Color.BLACK);
-//            tvpaired.setVisibility(View.VISIBLE);
-//            tvpaired.setText(R.string.paired);
-//            tvrssi.setVisibility(View.VISIBLE);
-//            tvrssi.setTextColor(Color.BLACK);
+
+//            tvCalorie.setTextColor(Color.BLACK);
+//            tvSteps.setTextColor(Color.BLACK);
+//            tvDistance.setTextColor(Color.BLACK);
+
 
         } else {
             tvuserName.setTextColor(Color.BLACK);

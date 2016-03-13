@@ -41,6 +41,7 @@ import android.widget.Toast;
 import com.sovate.workratemanager.bean.ActivityBaseInfo;
 import com.sovate.workratemanager.bean.ActivityDevice;
 import com.sovate.workratemanager.bean.ActivityDeviceStudentInfo;
+import com.sovate.workratemanager.bean.ActivityWorkRate;
 import com.sovate.workratemanager.bean.DeviceInfo;
 import com.sovate.workratemanager.bundle.SettingData;
 import com.sovate.workratemanager.common.Singleton;
@@ -48,6 +49,7 @@ import com.sovate.workratemanager.network.HttpApi;
 
 import java.lang.reflect.Method;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -63,8 +65,14 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     private static final int REQUEST_ENABLE_BT = 2;
     private static final int UART_PROFILE_CONNECTED = 20;
     private static final int UART_PROFILE_DISCONNECTED = 21;
-
     private static final int RESULT_SETTINGS = 22;
+
+    // UART 시나리오 코드
+    private static final int OPCODE_DEVICEDISCOVER = 200;
+    private static final int OPCODE_COLLECTDATA = 201;
+    private static final int OPCODE_DEVICERESET = 202;
+
+    private int deviceOperationCode = OPCODE_DEVICEDISCOVER;
 
     // permission constants
     private final int MY_PERMISSION_GRANTED = 100;
@@ -91,9 +99,18 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
 
     // Paired Device List
-    private List<DeviceInfo> deviceList;
+    private ArrayList<DeviceInfo> deviceList;
     private DeviceAdapter deviceAdapter;
     private Button btnGetDeviceStudentInfo;
+    private ListView pairedDeviceListView;
+
+
+    // band interface ui
+    private Button btnSendAI;
+    private Button btnSendAE;
+    private Button btnSendUB;
+
+
 
 
     // Connection variables
@@ -377,9 +394,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
-
-            //Intent i = new Intent(this, SettingsActivity.class);
-
             SettingData data = new SettingData();
 
             data.setServerUrl(HttpApi.BASE_URL);
@@ -419,13 +433,22 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             return;
         }
 
-        // UI
+        // device interface UI
         messageListView = (ListView) findViewById(R.id.listMessage);
         listAdapter = new ArrayAdapter<String>(this, R.layout.message_detail);
         messageListView.setAdapter(listAdapter);
         messageListView.setDivider(null);
         btnConnectDisconnect = (Button) findViewById(R.id.btn_select);
         btnRemove = (Button) findViewById(R.id.btn_remove);
+
+        btnSendAI = (Button) findViewById(R.id.btn_sendAI);
+        btnSendAE = (Button) findViewById(R.id.btn_sendAE);
+        btnSendUB = (Button) findViewById(R.id.btn_sendUB);
+
+
+
+
+        // 상단의 조회 UI
         btnGetDeviceStudentInfo = (Button) findViewById(R.id.btn_getDeviceStudentInfo);
         txtviewDeviceStatus = (TextView) findViewById(R.id.deviceName);
 
@@ -439,6 +462,13 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         spinClass.setOnItemSelectedListener(this);
 
         spinSport = (Spinner) findViewById(R.id.spinSport);
+
+        pairedDeviceListView = (ListView) findViewById(R.id.new_devices);
+        deviceList = new ArrayList<DeviceInfo>();
+        deviceAdapter = new DeviceAdapter(this, deviceList);
+
+        pairedDeviceListView.setAdapter(deviceAdapter);
+        pairedDeviceListView.setOnItemClickListener(mDeviceClickListener);
 
 
         service_init();
@@ -465,23 +495,23 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                     startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
                 } else {
                     if (btnConnectDisconnect.getText().equals("Connect")) {
+
+                        if(mDevice == null || mDevice.getName() == null || mDevice.getName().length() == 0 ) {
+                            Toast.makeText(getApplicationContext(), "선택된 디바이이스가 없습니다.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        // 기존 로그를 모두 삭제 처리 : 개별 처리를 할때 삭제늘 할지 않도록 구성해야 할듯..
                         listAdapter.clear();
-                        //mDevice = GetPairedBLEDevice(deviceName);
 
                         // Start searching if no InBodyBAND connected
-                        if (mDevice == null) {
-                            isBonded = false;
 
-                            // TODO Intend의 사용을 하지 않음. 코드 제외 필요.
-                            //Intent newIntent = new Intent(MainActivity.this, PairedDeviceListActivity.class);
-                            //startActivityForResult(newIntent, REQUEST_SELECT_DEVICE);
-                        } else {
-                            // Start connection if InBodyBAND connected
-                            isBonded = true;
-                            Log.d(TAG, "... onActivityResultdevice.address==" + mDevice + "mserviceValue" + mService);
-                            ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName() + " - connecting");
-                            mService.connect(mDevice.getAddress());
-                        }
+                        // TODO 연결이 되는 상황에서는 모두 삭제가 됨.
+                        isBonded = true;
+                        Log.d(TAG, "... onActivityResultdevice.address==" + mDevice + "mserviceValue" + mService);
+                        ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName() + " - connecting");
+                        mService.connect(mDevice.getAddress());
+
                     } else {
                         // Disconnect button pressed
                         if (mDevice != null) {
@@ -492,14 +522,53 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             }
         });
 
+
+        btnSendAI.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                // TODO 연결상태와 데이터가 처리 가능한 상태인지 모두 체크를 해야 하는데 가능한지 모르겠음..
+                // AK의 처리 방식도 필요 아마도 헬스체크일 것으로 보임....
+
+                deviceOperationCode = OPCODE_DEVICEDISCOVER;
+                btnConnectDisconnect.performClick();
+            }
+        });
+
+        btnSendAE.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                // TODO 연결상태와 데이터가 처리 가능한 상태인지 모두 체크를 해야 하는데 가능한지 모르겠음..
+                // AK의 처리 방식도 필요 아마도 헬스체크일 것으로 보임....
+
+                deviceOperationCode = OPCODE_COLLECTDATA;
+                btnConnectDisconnect.performClick();
+            }
+        });
+
+        btnSendUB.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                // TODO 연결상태와 데이터가 처리 가능한 상태인지 모두 체크를 해야 하는데 가능한지 모르겠음..
+                // AK의 처리 방식도 필요 아마도 헬스체크일 것으로 보임....
+
+                deviceOperationCode = OPCODE_DEVICERESET;
+                btnConnectDisconnect.performClick();
+            }
+        });
+
+
+
+        // 학교, 학년, 반을 기준으로 기기의 등록정보를 조회함.
+        // 등록된 기기을 기준으로 구성된 학생 정보를 가져온다.
         btnGetDeviceStudentInfo.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
 
                 v.setEnabled(false);
-
-                // TODO spinner에 값을 가져와 설정 하도록 구성
 
                 String schoolName = (String)spinSchool.getSelectedItem();
                 String grade = (String)spinGrade.getSelectedItem();
@@ -514,7 +583,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 else {
                     Toast.makeText(getApplicationContext(), "올바른 데이터가 없어, 조회할 수 없습니다.", Toast.LENGTH_SHORT).show();
                 }
-
 
             }
         });
@@ -582,6 +650,21 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     }
 
+    public void responsePostWorkrate(ActivityWorkRate workRate, Throwable t)
+    {
+        if(t != null){
+            // 요청 실패임.
+            Log.e(TAG, "onFailure");
+            Log.e(TAG, t.getMessage());
+            return;
+        }
+
+        // TODO workRate의 등록 완료 메시지 처리
+        // 향후 배치 처리로 한방에 올리도록 구성
+
+
+    }
+
 
     //==============================================================================================
     // bean 데이터를 처리하는 함수
@@ -623,6 +706,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         return intentFilter;
     }
 
+    // TODO UART 서비스의 중요 핸들러임......
     // Event handler function received from UART service
     private final BroadcastReceiver UARTStatusChangeReceiver = new BroadcastReceiver() {
 
@@ -696,6 +780,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         }
     };
 
+    // TODO pairing의 절차 문제를 확이니 요망.
     // Bonding event receiver.
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -739,41 +824,11 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     private void GetPairedBLEDevices(String DeviceName) {
 
-        // Task 작업을 배운후에 처리를 하도록 한다.
-//        // Server에서 기본 데이터를 등록된 기기의 정보를 가져온다.
-//
-//
-//        // Thread로 웹서버에 접속
-//        new Thread() {
-//            public void run() {
-//                try {
-//                    JSONArray json = HttpClient.getDevice();
-//                }
-//                catch (Exception e) {
-//
-//                }
-//
-//
-//                Bundle bun = new Bundle();
-////                bun.putString("NAVER_HTML", naverHtml);
-////                Message msg = handler.obtainMessage();
-////                msg.setData(bun);
-////                handler.sendMessage(msg);
-//            }
-//        }.start();
-
-
-        // list 정보 구성
-        deviceList = new ArrayList<DeviceInfo>();
-        deviceAdapter = new DeviceAdapter(this, deviceList);
-
-        ListView newDevicesListView = (ListView) findViewById(R.id.new_devices);
-        newDevicesListView.setAdapter(deviceAdapter);
-        newDevicesListView.setOnItemClickListener(mDeviceClickListener);
-
         Set<BluetoothDevice> pairedDevices = mBtAdapter.getBondedDevices();
 
         if (pairedDevices.size() != 0) {
+
+            deviceList.clear();
             for (BluetoothDevice device : pairedDevices) {
                 if (device.getName() == null)
                     continue;
@@ -785,15 +840,9 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                     info.setDevice(device);
                     info.setDeviceStudentInfo(getDeviceStudentInfo(device.getAddress()));
                     deviceList.add(info);
-
                 }
             }
-
             deviceAdapter.notifyDataSetChanged();
-//            if (deviceList.size() > 0) {
-//                mEmptyList.setVisibility(View.GONE);
-//                deviceAdapter.notifyDataSetChanged();
-//            }
         }
     }
 
@@ -942,7 +991,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         String log = "";
         for (int i = 0; i < Buf.length; i++)
-            log = log += String.format("%02X ", Buf[i]);
+            log += String.format("%02X ", Buf[i]);
 
         listAdapter.add("Snd : " + log);
         messageListView.smoothScrollToPosition(listAdapter.getCount() - 1);
@@ -1065,82 +1114,137 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
                         waitCnt = 0;
                         lastBuf = null;
-                        if (frame[4] == 'A' && frame[5] == 'K') { // 0x41 0x4B
-                            try {
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
+
+                        // 0x41 0x4B : 초기 연결 시 데이터 전송 : 인바디 데이터 전달
+                        // 0x41 0x57 : 인바디 검사 대기 상태일 때 주고 받는 메시지
+                        // 0x41 0x49 // 기기 설정 정보 전달 (시간 및 체중, 키 등..)가 진동하는 효과가 있음. --> 기기 확인시에 필요함.
+
+                        if(deviceOperationCode == OPCODE_DEVICEDISCOVER){
+                            if (frame[4] == 'A' && frame[5] == 'K') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+                                fncSendCommand((byte) 'A', (byte) 'W', null);
+                            } else if (frame[4] == 'A' && frame[5] == 'W') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+
+                                fncSendCommand((byte) 'A', (byte) 'I', MakeAI());
+                            } else if (frame[4] == 'A' && frame[5] == 'I') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+
+                                fncSendCommand((byte) 'A', (byte) 'W', null);
                             }
-                            fncSendCommand((byte) 'A', (byte) 'W', null);
-                        } else if (frame[4] == 'A' && frame[5] == 'W') { // 0x41 0x57
-                            try {
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                            }
-                            //fncSendCommand((byte) 'A', (byte) 'W', null);
-                            fncSendCommand((byte) 'A', (byte) 'I', MakeAI());
-                        } else if (frame[4] == 'A' && frame[5] == 'I') { // 0x41 0x49 // 기기가 진동하는 효과가 있음. --> 기기 확인시에 필요함.
-                            try {
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                            }
-                            //fncSendCommand((byte) 'A', (byte) 'I', MakeAI());
-                            //fncSendCommand((byte) 'A', (byte) 'W', null);
-                            fncSendCommand((byte) 'A', (byte) 'E', null);
-                        } else if (frame[4] == 'A' && frame[5] == 'E') { // 0x41 0x45 : 최종 할동량 전송 처리
-
-                            int startPosData = 6;
-
-                            int year = (int)frame[startPosData + 0] + 2000;
-                            int month = (int)frame[startPosData + 1];
-                            int day = (int)frame[startPosData + 2];
-                            int hour = (int)frame[startPosData + 3];
-
-                            int steps = ((frame[startPosData + 4] & 0xff) << 8) | (frame[startPosData + 5] & 0xff);
-                            int runCount = ((frame[startPosData + 6] & 0xff) << 8) | (frame[startPosData + 7] & 0xff);
-
-                            int stepMinute = ((frame[startPosData + 8] & 0xff) << 8) | (frame[startPosData + 9] & 0xff);
-                            int runMinute = ((frame[startPosData + 10] & 0xff) << 8) | (frame[startPosData + 11] & 0xff);
-
-                            int stepCalorie = ((frame[startPosData + 12] & 0xff) << 8) | (frame[startPosData + 13] & 0xff);
-                            int runCalorie = ((frame[startPosData + 14] & 0xff) << 8) | (frame[startPosData + 15] & 0xff);
-
-                            int stepDistance = ((frame[startPosData + 16] & 0xff) << 8) | (frame[startPosData + 17] & 0xff);
-                            int runDistance = ((frame[startPosData + 18] & 0xff) << 8) | (frame[startPosData + 19] & 0xff);
-
-                            String log = String.format("year : %d, month : %d, day : %d, hour : %d \n", year, month, day, hour);
-                            log += String.format("걸음수 : %d, 뜀수 : %d, 걸은시간 : %d, 뛴시간  : %d \n", steps, runCount, stepMinute, runMinute);
-                            log += String.format("걸음 칼로리 : %d, 뜀 칼로리 : %d, 걸은 거리 : %d, 뛴 거리  : %d \n", stepCalorie, runCalorie, stepDistance, runDistance);
-
-                            Log.e(TAG, log);
-
-                            try {
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                            }
-                            //fncSendCommand((byte) 'M', (byte) 'E', null);
-                            fncSendCommand((byte) 'U', (byte) 'B', null);
-                        } else if (frame[4] == 'U' && frame[5] == 'B') { // 0x55 0x42
-                            try {
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                            }
-                            // connection 종료 처리 : 초기화가 된다.
-                            //fncSendCommand((byte) 'M', (byte) 'E', null);
-                        } else if (frame[4] == 'U' && frame[5] == 'E') { // 0x55 0x45 : 기기에서 연결 끊을대 주는 코드
-                            try {
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                            }
-                            // 클라이언트에서 연결 종료 처리 함.
-                            //fncSendCommand((byte) 'M', (byte) 'E', null);
                         }
-//                        else if (frame[4] == 'M' && frame[5] == 'E') { // 0x4D 0x45
-//                            try {
-//                                Thread.sleep(500);
-//                            } catch (InterruptedException e) {
-//                            }
-//                            fncSendCommand((byte) 'A', (byte) 'W', null);
-//                        }
+                        else if(deviceOperationCode == OPCODE_COLLECTDATA){
+
+                            if (frame[4] == 'A' && frame[5] == 'K') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+                                fncSendCommand((byte) 'A', (byte) 'W', null);
+                            } else if (frame[4] == 'A' && frame[5] == 'W') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+
+                                fncSendCommand((byte) 'A', (byte) 'I', MakeAI());
+                            } else if (frame[4] == 'A' && frame[5] == 'I') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+
+                                fncSendCommand((byte) 'A', (byte) 'E', null);
+                            } else if (frame[4] == 'A' && frame[5] == 'E') { // 0x41 0x45 : 최종 할동량 전송 처리
+
+                                int startPosData = 6;
+
+                                int year = (int)frame[startPosData + 0] + 2000;
+                                int month = (int)frame[startPosData + 1];
+                                int day = (int)frame[startPosData + 2];
+                                int hour = (int)frame[startPosData + 3];
+
+                                int steps = ((frame[startPosData + 4] & 0xff) << 8) | (frame[startPosData + 5] & 0xff);
+                                int runCount = ((frame[startPosData + 6] & 0xff) << 8) | (frame[startPosData + 7] & 0xff);
+
+                                int stepMinute = ((frame[startPosData + 8] & 0xff) << 8) | (frame[startPosData + 9] & 0xff);
+                                int runMinute = ((frame[startPosData + 10] & 0xff) << 8) | (frame[startPosData + 11] & 0xff);
+
+                                int stepCalorie = ((frame[startPosData + 12] & 0xff) << 8) | (frame[startPosData + 13] & 0xff);
+                                int runCalorie = ((frame[startPosData + 14] & 0xff) << 8) | (frame[startPosData + 15] & 0xff);
+
+                                int stepDistance = ((frame[startPosData + 16] & 0xff) << 8) | (frame[startPosData + 17] & 0xff);
+                                int runDistance = ((frame[startPosData + 18] & 0xff) << 8) | (frame[startPosData + 19] & 0xff);
+
+
+                                String collectDate = String.format("%d-%02d-%02d %02d:00:00", year, month, day, hour);
+                                String log = String.format("날짜 : %s\n", collectDate);
+                                log += String.format("걸음수 : %d, 뜀수 : %d, 걸은시간 : %d, 뛴시간  : %d \n", steps, runCount, stepMinute, runMinute);
+                                log += String.format("걸음 칼로리 : %d, 뜀 칼로리 : %d, 걸은 거리 : %d, 뛴 거리  : %d \n", stepCalorie, runCalorie, stepDistance, runDistance);
+
+                                Log.e(TAG, log);
+
+
+                                // device apapter 변경 처리 함.
+                                String sportName = (String)spinSport.getSelectedItem();
+                                String sportId = Singleton.getInstance().getSportId(sportName);
+
+                                // TODO 요청 처리를 변경 요망.
+                                deviceAdapter.setWorkrate(mDevice.getAddress(),
+                                        collectDate,
+                                        stepCalorie+runCalorie, steps+runCount, stepDistance + runDistance,
+                                        sportId);
+
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+
+                                // TODO 종료코드로 리셋 처리도 가능할 수 있게 구성 요망.
+                                fncSendCommand((byte) 'A', (byte) 'W', null);
+                            }
+                        }
+                        else if(deviceOperationCode == OPCODE_DEVICERESET){
+
+                            if (frame[4] == 'A' && frame[5] == 'K') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+                                fncSendCommand((byte) 'A', (byte) 'W', null);
+                            } else if (frame[4] == 'A' && frame[5] == 'W') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+
+                                fncSendCommand((byte) 'U', (byte) 'B', null);
+                            }  else if (frame[4] == 'U' && frame[5] == 'B') { // 0x55 0x42
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+                                // connection 종료 처리 : 초기화가 된다.
+                                //fncSendCommand((byte) 'M', (byte) 'E', null);
+                            } else if (frame[4] == 'U' && frame[5] == 'E') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+                                // 클라이언트에서 연결 종료 처리 함.
+                            }
+                        }
+
+
                     }
                 } catch (Exception e) {
                     Log.e(TAG, e.toString());

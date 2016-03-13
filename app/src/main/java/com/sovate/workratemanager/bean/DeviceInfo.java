@@ -8,11 +8,9 @@ import android.bluetooth.BluetoothDevice;
 public class DeviceInfo {
 
     BluetoothDevice device;
-
     ActivityDeviceStudentInfo deviceStudentInfo;
-
+    ActivityWorkRate workRate = new ActivityWorkRate();
     String name;
-
 
 
     public BluetoothDevice getDevice() {
@@ -29,6 +27,14 @@ public class DeviceInfo {
 
     public void setDeviceStudentInfo(ActivityDeviceStudentInfo deviceStudentInfo) {
         this.deviceStudentInfo = deviceStudentInfo;
+    }
+
+    public ActivityWorkRate getWorkRate() {
+        return workRate;
+    }
+
+    public void setWorkRate(ActivityWorkRate workRate) {
+        this.workRate = workRate;
     }
 
     public String getName() {

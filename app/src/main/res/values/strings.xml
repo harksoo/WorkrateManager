@@ -71,12 +71,12 @@
     <string-array name="serverUrls">
         <item>http://210.127.55.205:82</item>
         <item>http://10.10.106.79:8080</item>
-        <item>http://192.168.0.2:8080</item>
+        <item>http://192.168.0.6:8080</item>
     </string-array>
     <string-array name="serverUrls_values">
         <item>http://210.127.55.205:82</item>
         <item>http://10.10.106.79:8080</item>
-        <item>http://192.168.0.2:8080</item>
+        <item>http://192.168.0.6:8080</item>
     </string-array>
 
     <string name="title_activity_settings">Settings</string>

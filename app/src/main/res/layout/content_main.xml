@@ -108,7 +108,7 @@
         <LinearLayout android:layout_width="fill_parent"
             android:layout_height="fill_parent"
             android:orientation="vertical"
-            android:background="#FF0000"
+            android:background="#dce0f0"
             >
             <ListView
                 android:id="@+id/new_devices"
@@ -207,13 +207,39 @@
         >
 
 
+        <!-- string data 비교를 조심... -->
         <Button
             android:id="@+id/btn_select"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:text="@string/connect"
+            />
+
+        <Button
+            android:id="@+id/btn_sendAI"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
 
             android:padding="12dp"
-            android:text="@string/connect" />
+            android:text="기기설정" />
+
+        <Button
+            android:id="@+id/btn_sendAE"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+
+            android:padding="12dp"
+            android:text="활동량정보" />
+
+        <Button
+            android:id="@+id/btn_sendUB"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+
+            android:padding="12dp"
+            android:text="밴드초기화" />
+
 
         <Button
             android:id="@+id/btn_remove"
@@ -221,7 +247,7 @@
             android:layout_height="wrap_content"
             android:padding="12dp"
             android:text="@string/removeBond"
-            android:clickable="false"
+            android:visibility="gone"
             />
     </LinearLayout>
 
