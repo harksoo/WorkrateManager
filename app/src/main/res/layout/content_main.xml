@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior"
+    tools:context="com.sovate.workratemanager.MainActivity"
+    tools:showIn="@layout/activity_main"
+    android:orientation="vertical"
+    >
+
+
+
+
+    <!-- 학교 선택 및 기기 조회 패널 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        >
+
+        <Spinner
+            android:id="@+id/spinSchool"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:prompt="@string/school_prompt"
+            android:layout_marginLeft="10dp"
+            android:minWidth="180dp"
+            />
+
+        <Spinner
+            android:id="@+id/spinGrade"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:prompt="@string/grade_prompt"
+            android:minWidth="80dp"
+            android:layout_marginLeft="10dp"
+            android:textAlignment="center"
+
+            />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="학년"
+            android:textSize="20dp"
+            android:textStyle="bold"
+            android:layout_marginLeft="10dp"
+            />
+
+
+        <Spinner
+            android:id="@+id/spinClass"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:prompt="@string/class_prompt"
+            android:minWidth="80dp"
+            android:layout_marginLeft="10dp"
+            android:textAlignment="center"
+            />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="반"
+            android:layout_marginLeft="10dp"
+            android:textSize="20dp"
+            android:textStyle="bold"
+            />
+
+        <Button
+            android:id="@+id/btn_getDeviceStudentInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="5dp"
+            android:layout_marginLeft="10dp"
+            android:text="조회" />
+
+    </LinearLayout>
+
+    <!-- 기기 정보 와 학생 매칭 정보 제공 리스트-->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical" >
+
+        <!-- 기기 선택 타이틀 : 제거 요망 -->
+        <!--
+        <TextView
+            android:id="@+id/title_devices"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:paddingLeft="12dp"
+            android:paddingRight="50dp"
+            android:text="@string/select_device"
+            android:textSize="15dip" />
+            -->
+
+
+
+        <LinearLayout android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:orientation="vertical"
+            android:background="#FF0000"
+            >
+            <ListView
+                android:id="@+id/new_devices"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                />
+
+            <!--
+            <TextView
+                android:id="@+id/empty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/scanning" />
+                -->
+
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- device  선택 정보 제공 영역 -->
+    <LinearLayout
+        android:id="@+id/RelativeLayout1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="0dp"
+        android:layout_marginTop="2dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="#CDCDCD"
+        >
+
+        <TextView
+            android:id="@+id/deviceName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/no_device"
+            android:padding="12dp"
+            android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    </LinearLayout>
+
+    <!-- 종목 선택 및 요청 처리 -->
+    <LinearLayout
+        android:id="@+id/linearLayout_sport"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="종목 :"
+            android:textSize="20dp"
+            android:textStyle="bold"
+            />
+
+        <Spinner
+            android:id="@+id/spinSport"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:prompt="@string/sport_prompt"
+            android:minWidth="280dp"
+            android:layout_marginLeft="10dp"
+            android:textAlignment="center"
+            />
+
+
+
+        <Button
+            android:id="@+id/btn_register"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:textSize="20dp"
+            android:text="개별 등록" />
+
+        <Button
+            android:id="@+id/btn_totalRegister"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:textSize="20dp"
+            android:text="전체 등록" />
+
+
+    </LinearLayout>
+
+    <!-- 연결 버튼 레이어  : Connect && Remove Bond -->
+    <LinearLayout
+        android:id="@+id/linearLayout2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        >
+
+
+        <Button
+            android:id="@+id/btn_select"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+
+            android:padding="12dp"
+            android:text="@string/connect" />
+
+        <Button
+            android:id="@+id/btn_remove"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:text="@string/removeBond"
+            android:clickable="false"
+            />
+    </LinearLayout>
+
+    <!-- device log 출력 범위 -->
+    <LinearLayout
+        android:id="@+id/linearLayout3"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical" >
+
+        <RelativeLayout
+            android:id="@+id/RelativeLayout2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+
+            <ListView
+                android:id="@+id/listMessage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentTop="true" >
+            </ListView>
+
+        </RelativeLayout>
+    </LinearLayout>
+
+
+</LinearLayout>
