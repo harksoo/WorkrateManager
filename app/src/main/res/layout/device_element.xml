@@ -50,23 +50,36 @@
         >
 
         <TextView
-            android:id="@+id/address"
+            android:id="@+id/deviceAlias"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="18dp"
+            android:textStyle="bold"
+            android:layout_marginLeft="5dp"
+            android:minWidth="30dp"
+            />
+
+        <TextView
+            android:id="@+id/deviceMac"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="14dp"
             android:layout_marginLeft="5dp"
+            android:minWidth="140dp"
             />
 
         <TextView
             android:id="@+id/userName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="14dp"
+            android:textSize="18dp"
             android:layout_marginLeft="10dp"
+            android:minWidth="80dp"
 
             />
 
         <!-- 인바디의 이름이 표출 제거 요망. -->
+        <!--
         <TextView
             android:id="@+id/name"
             android:layout_width="wrap_content"
@@ -75,37 +88,27 @@
             android:layout_marginLeft="5dp"
             android:visibility="gone"
             />
+            -->
 
         <TextView
-            android:id="@+id/collectDate"
+            android:id="@+id/wearbleData"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="14dp"
             android:layout_marginLeft="5dp"
+            android:minWidth="210dp"
             />
 
-        <TextView
-            android:id="@+id/calorie"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="14dp"
-            android:layout_marginLeft="5dp"
-            />
+
 
         <TextView
-            android:id="@+id/steps"
+            android:id="@+id/uploadStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="14dp"
+            android:textSize="18dp"
+            android:textStyle="bold"
             android:layout_marginLeft="5dp"
-            />
-
-        <TextView
-            android:id="@+id/distance"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="14dp"
-            android:layout_marginLeft="5dp"
+            android:text="준비"
             />
     </LinearLayout>
 

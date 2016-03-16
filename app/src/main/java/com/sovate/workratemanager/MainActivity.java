@@ -19,8 +19,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
@@ -44,6 +42,7 @@ import com.sovate.workratemanager.bean.ActivityDeviceStudentInfo;
 import com.sovate.workratemanager.bean.DeviceInfo;
 import com.sovate.workratemanager.bundle.SettingData;
 import com.sovate.workratemanager.common.Singleton;
+import com.sovate.workratemanager.common.UploadStatus;
 import com.sovate.workratemanager.network.HttpApi;
 import com.sovate.workratemanager.network.HttpResponseCode;
 
@@ -51,6 +50,7 @@ import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -93,10 +93,13 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     // UI variables
     private ListView messageListView;
     private ArrayAdapter<String> listAdapter;
-    private Button btnConnectDisconnect;
+    private Button btnDisconnect;
     private Button btnRemove;
     private final Handler handler = new Handler();
     private TextView txtviewDeviceStatus;
+
+    private View.OnClickListener listenerConnect;
+
 
 
     private Spinner spinSchool;
@@ -148,15 +151,15 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         appName = getString(R.string.app_name);
 
 
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+//
+//        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+//        fab.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+//                        .setAction("Action", null).show();
+//            }
+//        });
 
         // spinner 설정
         Spinner spinSchool = (Spinner) findViewById(R.id.spinSchool);
@@ -445,7 +448,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         listAdapter = new ArrayAdapter<String>(this, R.layout.message_detail);
         messageListView.setAdapter(listAdapter);
         messageListView.setDivider(null);
-        btnConnectDisconnect = (Button) findViewById(R.id.btn_select);
+        btnDisconnect = (Button) findViewById(R.id.btn_disconnect);
         btnRemove = (Button) findViewById(R.id.btn_remove);
 
         btnSendAI = (Button) findViewById(R.id.btn_sendAI);
@@ -492,8 +495,10 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             }
         });
 
+
+
         // Handler Disconnect & Connect button
-        btnConnectDisconnect.setOnClickListener(new View.OnClickListener() {
+        btnDisconnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (!mBtAdapter.isEnabled()) {
@@ -501,30 +506,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                     Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                     startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
                 } else {
-                    if (btnConnectDisconnect.getText().equals("Connect")) {
 
-                        if(mDevice == null || mDevice.getName() == null || mDevice.getName().length() == 0 ) {
-                            Toast.makeText(getApplicationContext(), "선택된 디바이이스가 없습니다.", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        // 기존 로그를 모두 삭제 처리 : 개별 처리를 할때 삭제늘 할지 않도록 구성해야 할듯..
-                        listAdapter.clear();
-
-                        // Start searching if no InBodyBAND connected
-
-                        // TODO 연결이 되는 상황에서는 모두 삭제가 됨.
-                        isBonded = true;
-                        Log.d(TAG, "... onActivityResultdevice.address==" + mDevice + "mserviceValue" + mService);
-                        ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName() + " - connecting");
-                        mService.connect(mDevice.getAddress());
-
-                    } else {
-                        // Disconnect button pressed
-                        if (mDevice != null) {
-                            mService.disconnect();
-                        }
-                    }
+                    Disconnect();
                 }
             }
         });
@@ -538,7 +521,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 // AK의 처리 방식도 필요 아마도 헬스체크일 것으로 보임....
 
                 deviceOperationCode = OPCODE_DEVICEDISCOVER;
-                btnConnectDisconnect.performClick();
+                Connect(OPCODE_DEVICEDISCOVER);
             }
         });
 
@@ -550,7 +533,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 // AK의 처리 방식도 필요 아마도 헬스체크일 것으로 보임....
 
                 deviceOperationCode = OPCODE_COLLECTDATA;
-                btnConnectDisconnect.performClick();
+                Connect(OPCODE_COLLECTDATA);
             }
         });
 
@@ -562,7 +545,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 // AK의 처리 방식도 필요 아마도 헬스체크일 것으로 보임....
 
                 deviceOperationCode = OPCODE_DEVICERESET;
-                btnConnectDisconnect.performClick();
+                Connect(OPCODE_DEVICERESET);
             }
         });
 
@@ -673,13 +656,22 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         // TODO workRate의 등록 완료 메시지 처리
         // 향후 배치 처리로 한방에 올리도록 구성
         // 500 create
+
+        UploadStatus status = UploadStatus.FAIL;
         if(responseCode == HttpResponseCode.SC_CREATED){
+            // 현재 mDevice의 기준으로 처리를 하도록 한다.
+            // TODO 이럴경우 중간의 요청은 모두 블럭 처리를 해야하는데.... 우선은 빠르게 진행하도록 한다.
+            status = UploadStatus.SUCCESS;
             Toast.makeText(this, "생성 되었습니다.", Toast.LENGTH_SHORT).show();
 
         } else {
             Toast.makeText(this, "생성이 실패했습니다. (response code : " + responseCode + ")", Toast.LENGTH_SHORT).show();
         }
 
+        if(mDevice != null) {
+            String mac = mDevice.getAddress();
+            deviceAdapter.setUpdateStatus(mac, status);
+        }
 
     }
 
@@ -736,7 +728,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                     public void run() {
                         String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                         Log.d(TAG, "UART_CONNECT_MSG");
-                        btnConnectDisconnect.setText("Disconnect");
+                        //btnDisconnect.setText("Disconnect");
+                        //btnDisconnect.setEnabled(true);
 
                         ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName() + " - ready");
                         listAdapter.add("[" + currentDateTimeString + "] Connected to: " + mDevice.getName());
@@ -760,9 +753,10 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                     public void run() {
                         String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                         Log.d(TAG, "UART_DISCONNECT_MSG");
-                        btnConnectDisconnect.setText("Connect");
+                        //btnDisconnect.setText("Connect");
+                        //btnDisconnect.setEnabled(false);
 
-                        ((TextView) findViewById(R.id.deviceName)).setText("Not Connected");
+                                ((TextView) findViewById(R.id.deviceName)).setText("Not Connected");
                         listAdapter.add("[" + currentDateTimeString + "] Disconnected to: " + mDevice.getName());
                         mState = UART_PROFILE_DISCONNECTED;
                         mService.close();
@@ -797,6 +791,44 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         }
     };
+
+    private void Connect(int OPCOE) {
+        if (!mBtAdapter.isEnabled()) {
+            Log.i(TAG, "onClick - BT not enabled yet");
+            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
+        } else {
+
+            if(mDevice == null || mDevice.getName() == null || mDevice.getName().length() == 0 ) {
+                Toast.makeText(getApplicationContext(), "선택된 디바이이스가 없습니다.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            deviceOperationCode = OPCOE;
+
+            // 기존 연결 제거 : 초기화 처리
+            mService.disconnect();
+
+            // 기존 로그를 모두 삭제 처리 : 개별 처리를 할때 삭제늘 할지 않도록 구성해야 할듯..
+            listAdapter.clear();
+
+            // Start searching if no InBodyBAND connected
+
+            // TODO 연결이 되는 상황에서는 모두 삭제가 됨.
+            isBonded = true;
+            Log.d(TAG, "... onActivityResultdevice.address==" + mDevice + "mserviceValue" + mService);
+            ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName() + " - connecting");
+            mService.connect(mDevice.getAddress());
+        }
+    }
+
+    private void Disconnect() {
+
+        if(mDevice != null){
+            mService.disconnect();
+        }
+
+    }
 
     // TODO pairing의 절차 문제를 확이니 요망.
     // Bonding event receiver.
@@ -860,6 +892,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                     deviceList.add(info);
                 }
             }
+            // sorting 처리
+            Collections.sort(deviceList, new DeviceInfo.DeviceNameAscCompare());
             deviceAdapter.notifyDataSetChanged();
         }
     }

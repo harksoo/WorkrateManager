@@ -13,6 +13,7 @@ import android.widget.TextView;
 import com.sovate.workratemanager.bean.ActivityDeviceStudentInfo;
 import com.sovate.workratemanager.bean.ActivityWorkRate;
 import com.sovate.workratemanager.bean.DeviceInfo;
+import com.sovate.workratemanager.common.UploadStatus;
 import com.sovate.workratemanager.network.HttpApi;
 
 import org.w3c.dom.Text;
@@ -59,6 +60,20 @@ public class DeviceAdapter extends BaseAdapter {
         return false;
     }
 
+    public boolean setUpdateStatus(String mac, UploadStatus status){
+        for(DeviceInfo item : devices){
+            if(item.getDevice().getAddress().equals(mac)){
+
+                item.setUploadStatus(status);
+                notifyDataSetChanged();
+
+                return  true;
+            }
+        }
+
+        return false;
+    }
+
     @Override
     public int getCount() {
         return devices.size();
@@ -84,63 +99,59 @@ public class DeviceAdapter extends BaseAdapter {
             vg = (ViewGroup) inflater.inflate(R.layout.device_element, null);
         }
 
+        UploadStatus status = devices.get(position).getUploadStatus();
         BluetoothDevice device = devices.get(position).getDevice();
         ActivityDeviceStudentInfo deviceStudentInfo = devices.get(position).getDeviceStudentInfo();
         ActivityWorkRate workRate =  devices.get(position).getWorkRate();
 
+
+        final TextView tvDeviceAlias = ((TextView) vg.findViewById(R.id.deviceAlias));
+        final TextView tvDeviceMac = ((TextView) vg.findViewById(R.id.deviceMac));
+
         final TextView tvuserName = ((TextView) vg.findViewById(R.id.userName));
-        final TextView tvadd = ((TextView) vg.findViewById(R.id.address));
-        final TextView tvname = ((TextView) vg.findViewById(R.id.name));
-
-        final TextView tvCollectDate = ((TextView) vg.findViewById(R.id.collectDate));
-        final TextView tvCalorie = ((TextView) vg.findViewById(R.id.calorie));
-        final TextView tvSteps = ((TextView) vg.findViewById(R.id.steps));
-        final TextView tvDistance = ((TextView) vg.findViewById(R.id.distance));
-
-        //final TextView tvpaired = (TextView) vg.findViewById(R.id.paired);
-        //final TextView tvrssi = (TextView) vg.findViewById(R.id.rssi);
-
-        //tvrssi.setVisibility(View.VISIBLE);
-
-        //String deviceAddress = device.getAddress();
-
-        //byte rssival = (byte) devRssiValues.get(device.getAddress()).intValue();
-//        byte rssival = 1;
-//        if (rssival != 0) {
-//            tvrssi.setText("Rssi = " + String.valueOf(rssival));
-//        }
+        final TextView tvWearableData = ((TextView) vg.findViewById(R.id.wearbleData));
+        final TextView tvUploadStatus = ((TextView) vg.findViewById(R.id.uploadStatus));
 
 
+
+        tvDeviceAlias.setText(deviceStudentInfo.getName());
         tvuserName.setText(deviceStudentInfo.getUserName());
-        tvname.setText(device.getName());
-        tvadd.setText(device.getAddress());
+        tvDeviceMac.setText(device.getAddress());
 
         if(workRate.getCalorie().length() > 0){
-            tvCollectDate.setText("T:" + workRate.getCollectDt().substring(0, 12));
-            tvCalorie.setText("C:" + workRate.getCalorie());
-            tvSteps.setText("S:" + workRate.getSteps());
-            tvDistance.setText("D:" + workRate.getDistance());
+
+            String s = String.format("T:%s, C:%s, S:%s, D:%s"
+                    , workRate.getCollectDt().substring(0, 12)
+                    , workRate.getCalorie()
+                    , workRate.getSteps()
+                    , workRate.getDistance()
+                    );
+            tvWearableData.setText(s);
+
         } else {
-            tvCollectDate.setText("");
-            tvCalorie.setText("");
-            tvSteps.setText("");
-            tvDistance.setText("");
+            tvWearableData.setText("");
+        }
+
+        if(status == UploadStatus.SUCCESS){
+            tvUploadStatus.setText("성공");
+            tvUploadStatus.setTextColor(Color.BLUE);
+        } else if(status == UploadStatus.FAIL){
+            tvUploadStatus.setText("실패");
+            tvUploadStatus.setTextColor(Color.RED);
+        }
+        else {
+            tvUploadStatus.setText("준비");
+            tvUploadStatus.setTextColor(Color.GRAY);
         }
 
 
         if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
             Log.i(TAG, "device::" + device.getName());
-//            tvname.setTextColor(Color.WHITE);
-//            tvadd.setTextColor(Color.WHITE);
-//            tvpaired.setTextColor(Color.GRAY);
-//            tvpaired.setVisibility(View.VISIBLE);
-//            tvpaired.setText(R.string.paired);
-//            tvrssi.setVisibility(View.VISIBLE);
-//            tvrssi.setTextColor(Color.WHITE);
-
+            tvDeviceAlias.setTextColor(Color.BLACK);
             tvuserName.setTextColor(Color.BLACK);
-            tvname.setTextColor(Color.BLACK);
-            tvadd.setTextColor(Color.BLACK);
+
+
+            //tvDeviceMac.setTextColor(Color.BLACK);
 
 //            tvCalorie.setTextColor(Color.BLACK);
 //            tvSteps.setTextColor(Color.BLACK);
@@ -149,8 +160,7 @@ public class DeviceAdapter extends BaseAdapter {
 
         } else {
             tvuserName.setTextColor(Color.BLACK);
-            tvname.setTextColor(Color.BLACK);
-            tvadd.setTextColor(Color.BLACK);
+            //tvDeviceMac.setTextColor(Color.BLACK);
 //            tvpaired.setVisibility(View.GONE);
 //            tvrssi.setVisibility(View.VISIBLE);
 //            tvrssi.setTextColor(Color.BLACK);
