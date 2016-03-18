@@ -41,6 +41,7 @@ import com.sovate.workratemanager.bean.ActivityDevice;
 import com.sovate.workratemanager.bean.ActivityDeviceStudentInfo;
 import com.sovate.workratemanager.bean.DeviceInfo;
 import com.sovate.workratemanager.bundle.SettingData;
+import com.sovate.workratemanager.common.BluetoothDeviceExt;
 import com.sovate.workratemanager.common.Singleton;
 import com.sovate.workratemanager.common.UploadStatus;
 import com.sovate.workratemanager.network.HttpApi;
@@ -71,6 +72,9 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     private static final int OPCODE_COLLECTDATA = 201;
     private static final int OPCODE_DEVICERESET = 202;
 
+    private static final int OPCODE_REGISTER = 203;
+    private static final int OPCODE_REGISTER_ALL = 204;
+
     private int deviceOperationCode = OPCODE_DEVICEDISCOVER;
 
 
@@ -87,7 +91,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     // Bluetooth variables
     private int mState = UART_PROFILE_DISCONNECTED;
     private UartService mService = null;
-    private BluetoothDevice mDevice = null;
+
+    private BluetoothDeviceExt mDevice = null;
     private BluetoothAdapter mBtAdapter = null;
 
     // UI variables
@@ -114,6 +119,13 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     private Button btnGetDeviceStudentInfo;
     private ListView pairedDeviceListView;
 
+    // register ui
+    private Button btnRegister;
+    private Button btnTotalRegister;
+
+
+    // register variable
+    //UploadStatus currentStatus
 
     // band interface ui
     private Button btnSendAI;
@@ -255,10 +267,12 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 // address
                 if (resultCode == Activity.RESULT_OK && data != null) {
                     String deviceAddress = data.getStringExtra(BluetoothDevice.EXTRA_DEVICE);
-                    mDevice = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(deviceAddress);
+                    // 생성
+                    mDevice = new BluetoothDeviceExt();
+                    mDevice.setBluetoothDevice(BluetoothAdapter.getDefaultAdapter().getRemoteDevice(deviceAddress));
 
-                    Log.d(TAG, "... onActivityResultdevice.address==" + mDevice + "mserviceValue" + mService);
-                    ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName() + " - connecting");
+                    Log.d(TAG, "... onActivityResultdevice.address==" + mDevice.getBluetoothDevice() + "mserviceValue" + mService);
+                    ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getBluetoothDevice().getName() + " - connecting");
                     mService.connect(deviceAddress);
 
                 }
@@ -455,6 +469,10 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         btnSendAE = (Button) findViewById(R.id.btn_sendAE);
         btnSendUB = (Button) findViewById(R.id.btn_sendUB);
 
+        btnRegister = (Button) findViewById(R.id.btn_register);
+        btnTotalRegister = (Button) findViewById(R.id.btn_totalRegister);
+
+
 
 
 
@@ -509,6 +527,30 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
                     Disconnect();
                 }
+            }
+        });
+
+        btnRegister.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                // TODO 연결상태와 데이터가 처리 가능한 상태인지 모두 체크를 해야 하는데 가능한지 모르겠음..
+                // AK의 처리 방식도 필요 아마도 헬스체크일 것으로 보임....
+
+                deviceOperationCode = OPCODE_REGISTER;
+                Connect(OPCODE_REGISTER);
+            }
+        });
+
+        btnTotalRegister.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                // TODO 전체 등록 프로세스 구현 필요
+                // AK의 처리 방식도 필요 아마도 헬스체크일 것으로 보임....
+
+                deviceOperationCode = OPCODE_REGISTER_ALL;
+                Connect(OPCODE_REGISTER_ALL);
             }
         });
 
@@ -642,14 +684,13 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     public void responsePostWorkrate(int responseCode, Throwable t)
     {
-        // trasaction complete 처리를 한다.
-        networkTransactionStatus = NETWORK_TRANSACTION_COMPLETE;
-        Log.i(TAG, "responsePostWorkrate");
+
 
         if(t != null){
             // 요청 실패임.
             Log.e(TAG, "onFailure");
             Log.e(TAG, t.getMessage());
+            networkTransactionStatus = NETWORK_TRANSACTION_COMPLETE;
             return;
         }
 
@@ -669,9 +710,14 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         }
 
         if(mDevice != null) {
-            String mac = mDevice.getAddress();
+            String mac = mDevice.getBluetoothDevice().getAddress();
             deviceAdapter.setUpdateStatus(mac, status);
+            mDevice.setUploadStatus(status);
         }
+
+        // trasaction complete 처리를 한다.
+        networkTransactionStatus = NETWORK_TRANSACTION_COMPLETE;
+        Log.i(TAG, "responsePostWorkrate");
 
     }
 
@@ -731,14 +777,14 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                         //btnDisconnect.setText("Disconnect");
                         //btnDisconnect.setEnabled(true);
 
-                        ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName() + " - ready");
-                        listAdapter.add("[" + currentDateTimeString + "] Connected to: " + mDevice.getName());
+                        ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getBluetoothDevice().getName() + " - ready");
+                        listAdapter.add("[" + currentDateTimeString + "] Connected to: " + mDevice.getBluetoothDevice().getName());
                         messageListView.smoothScrollToPosition(listAdapter.getCount() - 1);
                         mState = UART_PROFILE_CONNECTED;
 
                         String _deviceAddress = "";
                         if (null != mDevice)
-                            _deviceAddress = mDevice.getAddress(); // null 가능성
+                            _deviceAddress = mDevice.getBluetoothDevice().getAddress(); // null 가능성
                         // null
                         // possibility
 
@@ -757,7 +803,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                         //btnDisconnect.setEnabled(false);
 
                                 ((TextView) findViewById(R.id.deviceName)).setText("Not Connected");
-                        listAdapter.add("[" + currentDateTimeString + "] Disconnected to: " + mDevice.getName());
+                        listAdapter.add("[" + currentDateTimeString + "] Disconnected to: " + mDevice.getBluetoothDevice().getName());
                         mState = UART_PROFILE_DISCONNECTED;
                         mService.close();
                     }
@@ -769,7 +815,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
                 // Device bonding when service connected
                 if (!isBonded)
-                    pairDevice(mDevice);
+                    pairDevice(mDevice.getBluetoothDevice());
 
                 // set AK frame
                 lastBuf = new byte[] { 0x02, 0x48, 0x0C, 0x0A, 0x41, 0x4B, 0x34, 0x03 };
@@ -799,7 +845,10 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
         } else {
 
-            if(mDevice == null || mDevice.getName() == null || mDevice.getName().length() == 0 ) {
+            if(mDevice == null
+                    || mDevice.getBluetoothDevice() == null
+                    || mDevice.getBluetoothDevice().getName() == null
+                    || mDevice.getBluetoothDevice().getName().length() == 0 ) {
                 Toast.makeText(getApplicationContext(), "선택된 디바이이스가 없습니다.", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -816,15 +865,15 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
             // TODO 연결이 되는 상황에서는 모두 삭제가 됨.
             isBonded = true;
-            Log.d(TAG, "... onActivityResultdevice.address==" + mDevice + "mserviceValue" + mService);
-            ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName() + " - connecting");
-            mService.connect(mDevice.getAddress());
+            Log.d(TAG, "... onActivityResultdevice.address==" + mDevice.getBluetoothDevice() + "mserviceValue" + mService);
+            ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getBluetoothDevice().getName() + " - connecting");
+            mService.connect(mDevice.getBluetoothDevice().getAddress());
         }
     }
 
     private void Disconnect() {
 
-        if(mDevice != null){
+        if(mDevice != null && mDevice.getBluetoothDevice() != null){
             mService.disconnect();
         }
 
@@ -919,38 +968,27 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-
             // TODO 기존 연결 제거 및 정보 초기화 처리
-
-            if(mService != null && mDevice != null){
-                // 초기화 처리
-                mService.disconnect();
-                mDevice = null;
-            }
-
             String deviceAddress = deviceList.get(position).getDevice().getAddress();
-
-            mDevice = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(deviceAddress);
-
-            //mDevice = deviceList.get(position).getDevice();
-
-            // select text view에 해당 내용을 전달 하도록 구성
-            txtviewDeviceStatus.setText(mDevice.getAddress());
-
-//            mDevice = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(deviceAddress);
-//
-//            Log.d(TAG, "... onActivityResultdevice.address==" + mDevice + "mserviceValue" + mService);
-
-
-//            Bundle b = new Bundle();
-//            b.putString(BluetoothDevice.EXTRA_DEVICE, deviceList.get(position).getAddress());
-//
-//            Intent result = new Intent();
-//            result.putExtras(b);
-//            setResult(Activity.RESULT_OK, result);
-//            finish();
+            SelectWearableDevice(deviceAddress);
         }
     };
+
+    void SelectWearableDevice(String deviceAddress){
+
+        if(mService != null && mDevice != null){
+            // 초기화 처리
+            mService.disconnect();
+            mDevice.setBluetoothDevice(null);
+            mDevice = null;
+        }
+
+        mDevice = new BluetoothDeviceExt();
+        mDevice.setBluetoothDevice(BluetoothAdapter.getDefaultAdapter().getRemoteDevice(deviceAddress));
+
+        // select text view에 해당 내용을 전달 하도록 구성
+        txtviewDeviceStatus.setText(mDevice.getBluetoothDevice().getAddress());
+    }
 
     //============================================================
     // Utility 함수
@@ -972,7 +1010,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                         && mState == UART_PROFILE_CONNECTED) {
                     waitCnt++;
                     if (waitCnt > 4) {
-                        if (mDevice != null) {
+                        if (mDevice != null && mDevice.getBluetoothDevice() != null) {
                             Log.e(TAG, "TIMEOUT");
                             // 요청사항이 느릴수도 있음.... 확인 요망.
                             //mService.disconnect();
@@ -1224,7 +1262,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                                 } if(networkTransactionStatus == NETWORK_TRANSACTION_COMPLETE){
                                     // TODO 리셋처리를 한다.
                                     networkTransactionStatus = NETWORK_TRANSACTION_NOTWORKING;
-                                    if (mDevice != null) {
+                                    if (mDevice != null && mDevice.getBluetoothDevice() != null) {
                                         mService.disconnect();
                                     }
                                 }
@@ -1267,7 +1305,136 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                                 String sportId = Singleton.getInstance().getSportId(sportName);
 
                                 // TODO 요청 처리를 변경 요망.
-                                boolean result =  deviceAdapter.setWorkrate(mDevice.getAddress(),
+                                boolean result =  deviceAdapter.setWorkrate(mDevice.getBluetoothDevice().getAddress(),
+                                        collectDate,
+                                        stepCalorie+runCalorie, steps+runCount, stepDistance + runDistance,
+                                        sportId);
+
+                                if(result){
+                                    networkTransactionStatus = NETWORK_TRANSACTION_WORKING;
+                                }
+
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+
+                                // TODO 종료코드로 리셋 처리도 가능할 수 있게 구성 요망.
+                                fncSendCommand((byte) 'A', (byte) 'W', null);
+                            }
+                        }
+                        else if(deviceOperationCode == OPCODE_REGISTER || deviceOperationCode == OPCODE_REGISTER_ALL){
+
+
+                            if (frame[4] == 'U' && frame[5] == 'E') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+
+                                // 연결종료
+                                networkTransactionStatus = NETWORK_TRANSACTION_NOTWORKING;
+                                if (mDevice != null && mDevice.getBluetoothDevice() != null) {
+                                    mService.disconnect();
+                                    // TODO Event 호출
+                                    if(deviceOperationCode == OPCODE_REGISTER_ALL){
+                                        // TODO Next Device 의 호출
+
+                                        int id = pairedDeviceListView.getId();
+
+                                        int itemCount = pairedDeviceListView.getCount();
+                                        if(itemCount < (id + 1) ){
+
+                                            String macAddress = "";
+                                            SelectWearableDevice(macAddress);
+                                            btnTotalRegister.performClick();
+                                        }
+
+
+
+                                        //list.performItemClick(list.getChildAt(pos), pos, list.getItemIdAtPosition(pos));
+                                    }
+                                }
+
+                            } else if (frame[4] == 'A' && frame[5] == 'K') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+
+                                networkTransactionStatus = NETWORK_TRANSACTION_NOTWORKING;
+
+                                fncSendCommand((byte) 'A', (byte) 'W', null);
+                            } else if (frame[4] == 'A' && frame[5] == 'W') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+
+                                fncSendCommand((byte) 'A', (byte) 'I', MakeAI());
+                            } else if (frame[4] == 'A' && frame[5] == 'I') {
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+
+                                Log.e(TAG, "==================== networkTransactionStatus : " + networkTransactionStatus);
+                                if(networkTransactionStatus == NETWORK_TRANSACTION_NOTWORKING){
+                                    fncSendCommand((byte) 'A', (byte) 'E', null);
+                                } if(networkTransactionStatus == NETWORK_TRANSACTION_COMPLETE){
+
+                                    if(mDevice != null && mDevice.getBluetoothDevice() != null){
+                                        if(mDevice.getUploadStatus() == UploadStatus.SUCCESS){
+                                            fncSendCommand((byte) 'U', (byte) 'B', null);
+                                        } else {
+                                            // TODO 리셋처리를 한다.
+                                            if (mDevice != null && mDevice.getBluetoothDevice() != null) {
+                                                mService.disconnect();
+                                            }
+                                            networkTransactionStatus = NETWORK_TRANSACTION_NOTWORKING;
+                                        }
+                                    }
+                                }
+                                else {
+                                    fncSendCommand((byte) 'A', (byte) 'W', null);
+                                }
+
+                            } else if (frame[4] == 'A' && frame[5] == 'E') { // 0x41 0x45 : 최종 할동량 전송 처리
+
+                                int startPosData = 6;
+
+                                int year = (int)frame[startPosData + 0] + 2000;
+                                int month = (int)frame[startPosData + 1];
+                                int day = (int)frame[startPosData + 2];
+                                int hour = (int)frame[startPosData + 3];
+
+                                int steps = ((frame[startPosData + 4] & 0xff) << 8) | (frame[startPosData + 5] & 0xff);
+                                int runCount = ((frame[startPosData + 6] & 0xff) << 8) | (frame[startPosData + 7] & 0xff);
+
+                                int stepMinute = ((frame[startPosData + 8] & 0xff) << 8) | (frame[startPosData + 9] & 0xff);
+                                int runMinute = ((frame[startPosData + 10] & 0xff) << 8) | (frame[startPosData + 11] & 0xff);
+
+                                int stepCalorie = ((frame[startPosData + 12] & 0xff) << 8) | (frame[startPosData + 13] & 0xff);
+                                int runCalorie = ((frame[startPosData + 14] & 0xff) << 8) | (frame[startPosData + 15] & 0xff);
+
+                                int stepDistance = ((frame[startPosData + 16] & 0xff) << 8) | (frame[startPosData + 17] & 0xff);
+                                int runDistance = ((frame[startPosData + 18] & 0xff) << 8) | (frame[startPosData + 19] & 0xff);
+
+
+                                String collectDate = String.format("%d-%02d-%02d %02d:00:00", year, month, day, hour);
+                                String log = String.format("날짜 : %s\n", collectDate);
+                                log += String.format("걸음수 : %d, 뜀수 : %d, 걸은시간 : %d, 뛴시간  : %d \n", steps, runCount, stepMinute, runMinute);
+                                log += String.format("걸음 칼로리 : %d, 뜀 칼로리 : %d, 걸은 거리 : %d, 뛴 거리  : %d \n", stepCalorie, runCalorie, stepDistance, runDistance);
+
+                                Log.e(TAG, log);
+
+
+                                // device apapter 변경 처리 함.
+                                String sportName = (String)spinSport.getSelectedItem();
+                                String sportId = Singleton.getInstance().getSportId(sportName);
+
+                                // TODO 요청 처리를 변경 요망.
+                                boolean result =  deviceAdapter.setWorkrate(mDevice.getBluetoothDevice().getAddress(),
                                         collectDate,
                                         stepCalorie+runCalorie, steps+runCount, stepDistance + runDistance,
                                         sportId);

@@ -12,7 +12,7 @@
     tools:context="com.sovate.workratemanager.MainActivity"
     tools:showIn="@layout/activity_main"
     android:orientation="vertical"
-    >
+    android:gravity="center_horizontal">
 
 
 
@@ -22,67 +22,66 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="0dp"
-        >
+        android:padding="0dp">
 
         <Spinner
             android:id="@+id/spinSchool"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:prompt="@string/school_prompt"
             android:layout_marginLeft="10dp"
             android:minWidth="180dp"
-            />
+            android:layout_weight="4"
+            android:prompt="@string/school_prompt" />
 
         <Spinner
             android:id="@+id/spinGrade"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:prompt="@string/grade_prompt"
             android:minWidth="80dp"
             android:layout_marginLeft="10dp"
             android:textAlignment="center"
 
-            />
+            android:layout_weight="2" />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="학년"
-            android:textSize="20dp"
+            android:textSize="20sp"
             android:textStyle="bold"
             android:layout_marginLeft="10dp"
-            />
+            android:layout_weight="1" />
 
 
         <Spinner
             android:id="@+id/spinClass"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:prompt="@string/class_prompt"
             android:minWidth="80dp"
             android:layout_marginLeft="10dp"
             android:textAlignment="center"
-            />
+            android:layout_weight="2" />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="반"
             android:layout_marginLeft="10dp"
-            android:textSize="20dp"
+            android:textSize="20sp"
             android:textStyle="bold"
-            />
+            android:layout_weight="1" />
 
         <Button
             android:id="@+id/btn_getDeviceStudentInfo"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
-            android:textSize="20dp"
+            android:textSize="20sp"
             android:text="조회"
             android:layout_marginRight="0dp"
-            />
+            android:layout_weight="3" />
 
     </LinearLayout>
 
@@ -90,8 +89,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="3"
-        android:orientation="vertical" >
+        android:orientation="vertical"
+        android:layout_weight="4">
 
         <!-- 기기 선택 타이틀 : 제거 요망 -->
         <!--
@@ -173,29 +172,24 @@
         android:id="@+id/linearLayout_sport"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:weightSum="100"
-        >
+        android:orientation="horizontal">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="종목 :"
             android:textSize="20dp"
-            android:textStyle="bold"
-            android:layout_weight="20"
-            />
+            android:textStyle="bold" />
 
         <Spinner
             android:id="@+id/spinSport"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:prompt="@string/sport_prompt"
             android:minWidth="280dp"
             android:layout_marginLeft="10dp"
             android:textAlignment="center"
-            android:layout_weight="40"
-            />
+            android:layout_weight="1" />
 
 
 
@@ -205,9 +199,7 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:textSize="20dp"
-            android:text="개별 등록"
-            android:layout_weight="20"
-            />
+            android:text="개별 등록" />
 
         <Button
             android:id="@+id/btn_totalRegister"
@@ -215,9 +207,7 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:textSize="20dp"
-            android:text="전체 등록"
-            android:layout_weight="20"
-            />
+            android:text="전체 등록" />
 
 
     </LinearLayout>
@@ -280,8 +270,8 @@
         android:id="@+id/linearLayout3"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical" >
+        android:orientation="vertical"
+        android:layout_weight="1">
 
         <RelativeLayout
             android:id="@+id/RelativeLayout2"

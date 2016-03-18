@@ -121,7 +121,7 @@ public class DeviceAdapter extends BaseAdapter {
         if(workRate.getCalorie().length() > 0){
 
             String s = String.format("T:%s, C:%s, S:%s, D:%s"
-                    , workRate.getCollectDt().substring(0, 12)
+                    , workRate.getCollectDt().substring(0, 13)
                     , workRate.getCalorie()
                     , workRate.getSteps()
                     , workRate.getDistance()
