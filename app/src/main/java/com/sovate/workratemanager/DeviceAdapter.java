@@ -13,12 +13,14 @@ import android.widget.TextView;
 import com.sovate.workratemanager.bean.ActivityDeviceStudentInfo;
 import com.sovate.workratemanager.bean.ActivityWorkRate;
 import com.sovate.workratemanager.bean.DeviceInfo;
+import com.sovate.workratemanager.common.BatchWorkList;
 import com.sovate.workratemanager.common.UploadStatus;
 import com.sovate.workratemanager.network.HttpApi;
 
 import org.w3c.dom.Text;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -58,6 +60,18 @@ public class DeviceAdapter extends BaseAdapter {
         }
 
         return false;
+    }
+
+    public BatchWorkList getBatchList(){
+
+        BatchWorkList list = new BatchWorkList();
+        for(DeviceInfo item : devices){
+            if( item.getDevice().getAddress().length() > 0
+                && item.getDeviceStudentInfo().getUserName().length() > 0){
+                list.add(item.getDevice().getAddress());
+            }
+        }
+        return list;
     }
 
     public boolean setUpdateStatus(String mac, UploadStatus status){

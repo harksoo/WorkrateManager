@@ -41,6 +41,7 @@ import com.sovate.workratemanager.bean.ActivityDevice;
 import com.sovate.workratemanager.bean.ActivityDeviceStudentInfo;
 import com.sovate.workratemanager.bean.DeviceInfo;
 import com.sovate.workratemanager.bundle.SettingData;
+import com.sovate.workratemanager.common.BatchWorkList;
 import com.sovate.workratemanager.common.BluetoothDeviceExt;
 import com.sovate.workratemanager.common.Singleton;
 import com.sovate.workratemanager.common.UploadStatus;
@@ -55,6 +56,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
 
@@ -122,6 +125,11 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     // register ui
     private Button btnRegister;
     private Button btnTotalRegister;
+
+    private BatchWorkList listBatchWork = null;
+
+    private TimerTask ttCheckConn;
+    private Timer timerCheckConn;
 
 
     // register variable
@@ -272,7 +280,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                     mDevice.setBluetoothDevice(BluetoothAdapter.getDefaultAdapter().getRemoteDevice(deviceAddress));
 
                     Log.d(TAG, "... onActivityResultdevice.address==" + mDevice.getBluetoothDevice() + "mserviceValue" + mService);
-                    ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getBluetoothDevice().getName() + " - connecting");
+                    txtviewDeviceStatus.setText(mDevice.getBluetoothDevice().getName() + " - connecting");
                     mService.connect(deviceAddress);
 
                 }
@@ -536,7 +544,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             public void onClick(View v) {
                 // TODO 연결상태와 데이터가 처리 가능한 상태인지 모두 체크를 해야 하는데 가능한지 모르겠음..
                 // AK의 처리 방식도 필요 아마도 헬스체크일 것으로 보임....
-
                 deviceOperationCode = OPCODE_REGISTER;
                 Connect(OPCODE_REGISTER);
             }
@@ -549,8 +556,25 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 // TODO 전체 등록 프로세스 구현 필요
                 // AK의 처리 방식도 필요 아마도 헬스체크일 것으로 보임....
 
-                deviceOperationCode = OPCODE_REGISTER_ALL;
-                Connect(OPCODE_REGISTER_ALL);
+
+                listBatchWork = deviceAdapter.getBatchList();
+
+                listBatchWork.init();
+
+                if(listBatchWork != null && listBatchWork.size() > 0){
+
+                    String address = listBatchWork.GetNextItem();
+                    if (address != null && address.length() > 0) {
+                        btnRegister.setEnabled(false);
+                        btnTotalRegister.setEnabled(false);
+                        SelectWearableDevice(address);
+                        btnRegister.performClick();
+                    }
+                } else {
+                    Disconnect();
+                    btnRegister.setEnabled(true);
+                    btnTotalRegister.setEnabled(true);
+                }
             }
         });
 
@@ -602,6 +626,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
                 v.setEnabled(false);
 
+                Disconnect();
+
                 String schoolName = (String)spinSchool.getSelectedItem();
                 String grade = (String)spinGrade.getSelectedItem();
                 String classNumber = (String)spinClass.getSelectedItem();
@@ -620,6 +646,40 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         });
 
         // Set initial UI state
+
+
+
+    }
+
+    void CheckConnectinoTimer(){
+        ttCheckConn = new TimerTask() {
+            @Override
+            public void run() {
+                timerCheckConn.cancel();
+
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        if(mService.mConnectionState != UartService.STATE_CONNECTED){
+                            Disconnect();
+                            // TODO batch 작업 초기화
+
+                            if(listBatchWork != null) {
+                                listBatchWork.Clear();
+                                listBatchWork = null;
+                            }
+                            deviceAdapter.setUpdateStatus(mDevice.getBluetoothDevice().getAddress(), UploadStatus.FAIL);
+                            mDevice = null;
+                        }
+                    }
+                });
+
+
+
+            }
+        };
+
+        timerCheckConn = new Timer();
+        timerCheckConn.schedule(ttCheckConn, 3000);
     }
 
     //==============================================================================================
@@ -777,7 +837,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                         //btnDisconnect.setText("Disconnect");
                         //btnDisconnect.setEnabled(true);
 
-                        ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getBluetoothDevice().getName() + " - ready");
+                        txtviewDeviceStatus.setText(mDevice.getBluetoothDevice().getName() + " - ready");
                         listAdapter.add("[" + currentDateTimeString + "] Connected to: " + mDevice.getBluetoothDevice().getName());
                         messageListView.smoothScrollToPosition(listAdapter.getCount() - 1);
                         mState = UART_PROFILE_CONNECTED;
@@ -802,10 +862,25 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                         //btnDisconnect.setText("Connect");
                         //btnDisconnect.setEnabled(false);
 
-                                ((TextView) findViewById(R.id.deviceName)).setText("Not Connected");
+                        txtviewDeviceStatus.setText("Not Connected");
                         listAdapter.add("[" + currentDateTimeString + "] Disconnected to: " + mDevice.getBluetoothDevice().getName());
                         mState = UART_PROFILE_DISCONNECTED;
                         mService.close();
+
+                        if(listBatchWork != null){
+                            // TODO : 배치 작업이 있으면 구동을 한다.
+                            String address = listBatchWork.GetNextItem();
+                            if (address != null && address.length() > 0) {
+                                btnRegister.setEnabled(false);
+                                btnTotalRegister.setEnabled(false);
+                                SelectWearableDevice(address);
+                                btnRegister.performClick();
+                            } else {
+                                Disconnect();
+                                btnRegister.setEnabled(true);
+                                btnTotalRegister.setEnabled(true);
+                            }
+                        }
                     }
                 });
             }
@@ -866,8 +941,13 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             // TODO 연결이 되는 상황에서는 모두 삭제가 됨.
             isBonded = true;
             Log.d(TAG, "... onActivityResultdevice.address==" + mDevice.getBluetoothDevice() + "mserviceValue" + mService);
-            ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getBluetoothDevice().getName() + " - connecting");
+            txtviewDeviceStatus.setText(mDevice.getBluetoothDevice().getName() + " - connecting");
+
+            // 연결 상태 확인이 어려움.
             mService.connect(mDevice.getBluetoothDevice().getAddress());
+
+            CheckConnectinoTimer();
+
         }
     }
 
@@ -877,6 +957,10 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             mService.disconnect();
         }
 
+        btnRegister.setEnabled(true);
+        btnTotalRegister.setEnabled(true);
+
+        txtviewDeviceStatus.setText(R.string.no_device);
     }
 
     // TODO pairing의 절차 문제를 확이니 요망.
@@ -1010,11 +1094,9 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                         && mState == UART_PROFILE_CONNECTED) {
                     waitCnt++;
                     if (waitCnt > 4) {
-                        if (mDevice != null && mDevice.getBluetoothDevice() != null) {
-                            Log.e(TAG, "TIMEOUT");
-                            // 요청사항이 느릴수도 있음.... 확인 요망.
-                            //mService.disconnect();
-                        }
+                        Log.e(TAG, "TIMEOUT");
+                        // TODO disconnection 이 느릴 경우 처리
+                        Disconnect();
                     } else if (waitCnt == 3) {
                         listAdapter.add("Resend buffer");
                         SendData(lastBuf);
@@ -1336,24 +1418,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                                 networkTransactionStatus = NETWORK_TRANSACTION_NOTWORKING;
                                 if (mDevice != null && mDevice.getBluetoothDevice() != null) {
                                     mService.disconnect();
-                                    // TODO Event 호출
-                                    if(deviceOperationCode == OPCODE_REGISTER_ALL){
-                                        // TODO Next Device 의 호출
 
-                                        int id = pairedDeviceListView.getId();
-
-                                        int itemCount = pairedDeviceListView.getCount();
-                                        if(itemCount < (id + 1) ){
-
-                                            String macAddress = "";
-                                            SelectWearableDevice(macAddress);
-                                            btnTotalRegister.performClick();
-                                        }
-
-
-
-                                        //list.performItemClick(list.getChildAt(pos), pos, list.getItemIdAtPosition(pos));
-                                    }
                                 }
 
                             } else if (frame[4] == 'A' && frame[5] == 'K') {

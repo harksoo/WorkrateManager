@@ -53,10 +53,13 @@ public class UartService extends Service {
     public static final UUID RX_CHAR_UUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
     public static final UUID TX_CHAR_UUID = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e");
 
+
+
     /*
      * Gatt callback
      */
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
+
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             String intentAction;
@@ -184,21 +187,25 @@ public class UartService extends Service {
     /*
      * Connect Device
      */
+
+    // TODO 연결 상태를 명확히 알수 있도록 구성 요망.
     public boolean connect(final String address) {
         if (mBluetoothAdapter == null || address == null) {
             Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
             return false;
         }
 
-        if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress) && mBluetoothGatt != null) {
-            Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
-            if (mBluetoothGatt.connect()) {
-                mConnectionState = STATE_CONNECTING;
-                return true;
-            } else {
-                return false;
-            }
-        }
+        mConnectionState = STATE_DISCONNECTED;
+        // TODO 모든 연결을 새롭게 구성을 하도록 한다.
+//        if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress) && mBluetoothGatt != null) {
+//            Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
+//            if (mBluetoothGatt.connect()) {
+//                mConnectionState = STATE_CONNECTING;
+//                return true;
+//            } else {
+//                return false;
+//            }
+//        }
 
         final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         if (device == null) {
@@ -207,11 +214,24 @@ public class UartService extends Service {
         }
 
         mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
-        refreshDeviceCache(mBluetoothGatt);
+
+
+        //boolean readRemoteRssi = mBluetoothGatt.readRemoteRssi();
+        //Log.e(TAG, "readRemoteRssi : " + readRemoteRssi);
+
         Log.d(TAG, "Trying to create a new connection.");
         mBluetoothDeviceAddress = address;
         mConnectionState = STATE_CONNECTING;
-        return true;
+
+        if(refreshDeviceCache(mBluetoothGatt) == true) {
+            mBluetoothDeviceAddress = address;
+            mConnectionState = STATE_CONNECTING;
+
+            return true;
+        }
+
+        return false;
+
     }
 
     private boolean refreshDeviceCache(BluetoothGatt gatt) {
