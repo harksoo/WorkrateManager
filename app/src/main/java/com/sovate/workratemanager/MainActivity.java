@@ -679,7 +679,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         };
 
         timerCheckConn = new Timer();
-        timerCheckConn.schedule(ttCheckConn, 3000);
+        timerCheckConn.schedule(ttCheckConn, 5000);
     }
 
     //==============================================================================================
